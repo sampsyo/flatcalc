@@ -65,6 +65,31 @@ impl<R: io::BufRead> MyParser<R> {
         Ok(num_digits == buflen)
     }
 
+    fn skip_whitespace_chunk(&mut self) -> io::Result<bool> {
+        let buf = self.reader.fill_buf()?;
+        let buflen = buf.len();
+        if buflen == 0 {
+            return Ok(false);
+        }
+        let num_whitespace = {
+            let mut num_whitespace = buf.len();
+            for (i, char) in buf.iter().enumerate() {
+                if !char.is_ascii_whitespace() {
+                    num_whitespace = i;
+                    break;
+                }
+            }
+            num_whitespace
+        };
+        self.reader.consume(num_whitespace);
+        Ok(num_whitespace == buflen)
+    }
+
+    fn skip_whitespace(&mut self) -> io::Result<()> {
+        while self.skip_whitespace_chunk()? {}
+        Ok(())
+    }
+
     fn parse_lit(&mut self) -> io::Result<Option<Expr>> {
         // TODO Skip entirely if the first character is not a digit?
         let mut digits: Vec<u8> = vec![];
@@ -77,8 +102,57 @@ impl<R: io::BufRead> MyParser<R> {
         }
     }
 
-    fn parse_expr(&mut self) -> io::Result<Option<Expr>> {
+    fn parse_term_expr(&mut self) -> io::Result<Option<Expr>> {
+        // TODO Eventually parse parens.
         self.parse_lit()
+    }
+
+    fn parse_add_expr(&mut self) -> io::Result<Option<Expr>> {
+        // Parse the term, which may be the LHS or the whole expression.
+        let lhs = self.parse_term_expr()?;
+        if lhs.is_none() {
+            return Ok(None);
+        }
+
+        // Check for EOI and emit just the term.
+        self.skip_whitespace()?;
+        let buf = self.reader.fill_buf()?;
+        if buf.len() == 0 {
+            return Ok(lhs);
+        }
+
+        // Expect a binary operator.
+        let char = buf[0];
+        match char {
+            b'+' | b'-' => {
+                self.reader.consume(1);
+            }
+            _ => return Ok(None),
+        }
+        self.skip_whitespace()?;
+
+        // Expect a recursive right-hand side.
+        let rhs = self.parse_add_expr()?;
+        if rhs.is_none() {
+            return Ok(None);
+        }
+
+        // Construct the full expression.
+        let op = match char {
+            b'+' => BinOp::Add,
+            b'-' => BinOp::Sub,
+            _ => unreachable!(),
+        };
+        Ok(Some(Expr::Binary(
+            op,
+            Box::new(lhs.unwrap()),
+            Box::new(rhs.unwrap()),
+        )))
+    }
+
+    fn parse_expr(&mut self) -> io::Result<Option<Expr>> {
+        self.skip_whitespace()?;
+        self.parse_add_expr()
     }
 }
 
