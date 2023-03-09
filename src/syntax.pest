@@ -1,0 +1,18 @@
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+
+number = @{ ASCII_DIGIT+ }
+
+expr = _{ SOI ~ addExpr ~ EOI }
+term = _{ number }
+
+addOp = _{ add | sub }
+    add = { "+" }
+    sub = { "-" }
+mulOp = _{ mul | div }
+    mul = { "*" }
+    div = { "/" }
+
+addExprW = _{ addExpr | mulExprW }
+    addExpr = { term ~ addOp ~ addExprW }
+mulExprW = _{ mulExpr | number }
+    mulExpr = { term ~ mulOp ~ mulExprW }
