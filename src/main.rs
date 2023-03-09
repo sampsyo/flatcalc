@@ -1,6 +1,7 @@
 use pest::{iterators::Pair, Parser};
 use rand::Rng;
 use std::env;
+use std::io;
 use std::io::Read;
 
 #[derive(pest_derive::Parser)]
@@ -45,7 +46,7 @@ impl Expr {
             _ => unreachable!(),
         }
     }
-
+    
     fn interp(&self) -> i64 {
         match self {
             Expr::Binary(op, lhs, rhs) => {
@@ -60,6 +61,56 @@ impl Expr {
             }
             Expr::Literal(num) => *num,
         }
+    }
+}
+
+struct MyParser<r: io::BufRead> {
+    reader: r,
+}
+
+impl<R: io::BufRead> MyParser<R> {
+    fn new(reader: R) -> Self {
+        Self {
+            reader,
+        }
+    }
+    
+    /// Read digits from the input stream into `out` for a chunk of input. Return whether we should
+    /// keep going, i.e., whether the digits hit the end of the chunk we looked at.
+    fn read_digits(&mut self, out: &mut Vec<u8>) -> io::Result<bool> {
+        let buf = self.reader.fill_buf()?;
+        let buflen = buf.len();
+        let num_digits = {
+            let mut num_digits = buf.len();
+            for i in 1..buf.len() {
+                if buf[i].is_ascii_digit() {
+                    num_digits = i;
+                    break;
+                }
+            }
+            num_digits
+        };
+        if num_digits > 0 {
+            out.extend_from_slice(buf[..num_digits].as_ref());
+            self.reader.consume(num_digits);
+        }
+        Ok(num_digits == buflen)
+    }
+    
+    fn parse_lit(&mut self) -> io::Result<Option<Expr>> {
+        // TODO Skip entirely if the first character is not a digit?
+        let mut digits: Vec<u8> = vec!();
+        while self.read_digits(&mut digits)? { }
+        if digits.is_empty() {
+            Ok(None)
+        } else {
+            let num = std::str::from_utf8(&digits).unwrap().parse().unwrap();
+            Ok(Some(Expr::Literal(num)))
+        }
+    }
+
+    fn parse_expr(&mut self) -> io::Result<Option<Expr>> {
+        self.parse_lit()
     }
 }
 
@@ -105,12 +156,8 @@ impl std::fmt::Display for Expr {
 }
 
 fn parse_stdin() -> std::io::Result<Expr> {
-    let mut buffer = String::new();
-    std::io::stdin().read_to_string(&mut buffer)?;
-
-    let mut pairs = Syntax::parse(Rule::expr, &buffer).expect("syntax error");
-    let pair = pairs.next().unwrap();
-    Ok(Expr::parse(pair))
+    let opt = MyParser::new(io::BufReader::new(io::stdin())).parse_expr()?;
+    Ok(opt.expect("parse error"))
 }
 
 fn main() {
