@@ -1,6 +1,7 @@
 use pest::{Parser, iterators::Pair};
-use std::io;
+use std::io::Read;
 use rand::Rng;
+use std::env;
 
 #[derive(pest_derive::Parser)]
 #[grammar = "syntax.pest"]
@@ -103,17 +104,28 @@ impl std::fmt::Display for Expr {
     }
 }
 
-fn main() {
+fn parse_stdin() -> std::io::Result<Expr> {
     let mut buffer = String::new();
-    io::stdin().read_line(&mut buffer).unwrap();
+    std::io::stdin().read_to_string(&mut buffer)?;
 
     let mut pairs = Syntax::parse(Rule::expr, &buffer).expect("syntax error");
     let pair = pairs.next().unwrap();
-    let expr = Expr::parse(pair);
-    println!("{}", expr);
-    println!("{}", expr.interp());
+    Ok(Expr::parse(pair))
+}
 
-    let other_expr = Generator::default().gen(0.999);
-    println!("{}", other_expr);
-    println!("{}", other_expr.interp());
+fn main() {
+    let mode = env::args().nth(1).unwrap_or("interp".to_string());
+    
+    if mode == "interp" {
+        let expr = parse_stdin().unwrap();
+        println!("{}", expr.interp());
+    } else if mode == "pretty" {
+        let expr = parse_stdin().unwrap();
+        println!("{}", expr);
+    } else if mode == "gen" {
+        let expr = Generator::default().gen(0.999);
+        println!("{}", expr);
+    } else {
+        eprintln!("unknown mode: {}", mode);
+    }
 }
