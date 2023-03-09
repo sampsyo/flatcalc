@@ -124,6 +124,15 @@ fn parse_stdin() -> std::io::Result<Expr> {
     Ok(Expr::parse(pair))
 }
 
+fn generate() -> Expr {
+    let seed = env::args().nth(2);
+    let mut gen = match seed {
+        Some(s) => Generator::new(s.parse().expect("seed must be a number")),
+        None => Generator::default(),
+    };
+    gen.gen(0.9999999)
+}
+
 fn main() {
     let mode = env::args().nth(1).unwrap_or("interp".to_string());
 
@@ -134,13 +143,10 @@ fn main() {
         let expr = parse_stdin().unwrap();
         println!("{}", expr);
     } else if mode == "gen" {
-        let seed = env::args().nth(2);
-        let mut gen = match seed {
-            Some(s) => Generator::new(s.parse().expect("seed must be a number")),
-            None => Generator::default(),
-        };
-        let expr = gen.gen(0.9999);
-        println!("{}", expr);
+        println!("{}", generate());
+    } else if mode == "gen_interp" {
+        let expr = generate();
+        println!("{}", expr.interp());
     } else {
         eprintln!("unknown mode: {}", mode);
     }
