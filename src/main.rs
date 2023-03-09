@@ -24,7 +24,7 @@ enum Expr {
 impl Expr {
     fn parse(tree: Pair<Rule>) -> Self {
         match tree.as_rule() {
-            Rule::addExpr => {
+            Rule::addExpr  | Rule::mulExpr => {
                 let mut pairs = tree.into_inner();
                 let lhs = pairs.next().unwrap();
                 let op = pairs.next().unwrap();
