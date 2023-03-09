@@ -1,7 +1,7 @@
-use pest::{Parser, iterators::Pair};
-use std::io::Read;
+use pest::{iterators::Pair, Parser};
 use rand::Rng;
 use std::env;
+use std::io::Read;
 
 #[derive(pest_derive::Parser)]
 #[grammar = "syntax.pest"]
@@ -24,7 +24,7 @@ enum Expr {
 impl Expr {
     fn parse(tree: Pair<Rule>) -> Self {
         match tree.as_rule() {
-            Rule::addExpr  | Rule::mulExpr => {
+            Rule::addExpr | Rule::mulExpr => {
                 let mut pairs = tree.into_inner();
                 let lhs = pairs.next().unwrap();
                 let op = pairs.next().unwrap();
@@ -115,7 +115,7 @@ fn parse_stdin() -> std::io::Result<Expr> {
 
 fn main() {
     let mode = env::args().nth(1).unwrap_or("interp".to_string());
-    
+
     if mode == "interp" {
         let expr = parse_stdin().unwrap();
         println!("{}", expr.interp());
