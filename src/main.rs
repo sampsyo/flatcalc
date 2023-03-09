@@ -40,11 +40,9 @@ struct MyParser<R: io::BufRead> {
 
 impl<R: io::BufRead> MyParser<R> {
     fn new(reader: R) -> Self {
-        Self {
-            reader,
-        }
+        Self { reader }
     }
-    
+
     /// Read digits from the input stream into `out` for a chunk of input. Return whether we should
     /// keep going, i.e., whether the digits hit the end of the chunk we looked at.
     fn read_digits(&mut self, out: &mut Vec<u8>) -> io::Result<bool> {
@@ -52,8 +50,8 @@ impl<R: io::BufRead> MyParser<R> {
         let buflen = buf.len();
         let num_digits = {
             let mut num_digits = buf.len();
-            for i in 0..buf.len() {
-                if !buf[i].is_ascii_digit() {
+            for (i, char) in buf.iter().enumerate() {
+                if !char.is_ascii_digit() {
                     num_digits = i;
                     break;
                 }
@@ -66,11 +64,11 @@ impl<R: io::BufRead> MyParser<R> {
         }
         Ok(num_digits == buflen)
     }
-    
+
     fn parse_lit(&mut self) -> io::Result<Option<Expr>> {
         // TODO Skip entirely if the first character is not a digit?
-        let mut digits: Vec<u8> = vec!();
-        while self.read_digits(&mut digits)? { }
+        let mut digits: Vec<u8> = vec![];
+        while self.read_digits(&mut digits)? {}
         if digits.is_empty() {
             Ok(None)
         } else {
