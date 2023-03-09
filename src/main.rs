@@ -1,5 +1,5 @@
 use pest::{iterators::Pair, Parser};
-use rand::Rng;
+use rand::{rngs::SmallRng, Rng, SeedableRng};
 use std::env;
 use std::io::Read;
 
@@ -63,12 +63,23 @@ impl Expr {
     }
 }
 
-#[derive(Default)]
 struct Generator {
-    rng: rand::rngs::ThreadRng,
+    rng: SmallRng,
 }
 
 impl Generator {
+    fn new(seed: u64) -> Self {
+        Self {
+            rng: SmallRng::seed_from_u64(seed),
+        }
+    }
+
+    fn default() -> Self {
+        Self {
+            rng: SmallRng::from_entropy(),
+        }
+    }
+
     fn gen(&mut self, bin_prob: f64) -> Expr {
         if self.rng.gen::<f64>() > bin_prob {
             Expr::Literal(self.rng.gen_range(0..100))
@@ -123,7 +134,12 @@ fn main() {
         let expr = parse_stdin().unwrap();
         println!("{}", expr);
     } else if mode == "gen" {
-        let expr = Generator::default().gen(0.9999);
+        let seed = env::args().nth(2);
+        let mut gen = match seed {
+            Some(s) => Generator::new(s.parse().expect("seed must be a number")),
+            None => Generator::default(),
+        };
+        let expr = gen.gen(0.9999);
         println!("{}", expr);
     } else {
         eprintln!("unknown mode: {}", mode);
