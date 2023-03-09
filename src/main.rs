@@ -82,8 +82,8 @@ impl<R: io::BufRead> MyParser<R> {
         let buflen = buf.len();
         let num_digits = {
             let mut num_digits = buf.len();
-            for i in 1..buf.len() {
-                if buf[i].is_ascii_digit() {
+            for i in 0..buf.len() {
+                if !buf[i].is_ascii_digit() {
                     num_digits = i;
                     break;
                 }
