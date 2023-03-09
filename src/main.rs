@@ -1,5 +1,6 @@
 use pest::{Parser, iterators::Pair};
 use std::io;
+use rand::Rng;
 
 #[derive(pest_derive::Parser)]
 #[grammar = "syntax.pest"]
@@ -50,13 +51,37 @@ impl Expr {
                 let lhs = lhs.interp();
                 let rhs = rhs.interp();
                 match op {
-                    BinOp::Add => lhs + rhs,
-                    BinOp::Sub => lhs - rhs,
-                    BinOp::Mul => lhs * rhs,
-                    BinOp::Div => lhs / rhs,
+                    BinOp::Add => lhs.wrapping_add(rhs),
+                    BinOp::Sub => lhs.wrapping_sub(rhs),
+                    BinOp::Mul => lhs.wrapping_mul(rhs),
+                    BinOp::Div => lhs.checked_div(rhs).unwrap_or(0),
                 }
             }
             Expr::Literal(num) => *num,
+        }
+    }
+}
+
+#[derive(Default)]
+struct Generator {
+    rng: rand::rngs::ThreadRng,
+}
+
+impl Generator {
+    fn gen(&mut self, bin_prob: f64) -> Expr {
+        if self.rng.gen::<f64>() > bin_prob {
+            Expr::Literal(self.rng.gen_range(0..100))
+        } else {
+            let lhs = Box::new(self.gen(bin_prob.powi(2)));
+            let rhs = Box::new(self.gen(bin_prob.powi(2)));
+            let op = match self.rng.gen_range(0..4) {
+                0 => BinOp::Add,
+                1 => BinOp::Sub,
+                2 => BinOp::Mul,
+                3 => BinOp::Div,
+                _ => unreachable!(),
+            };
+            Expr::Binary(op, lhs, rhs)
         }
     }
 }
@@ -87,4 +112,8 @@ fn main() {
     let expr = Expr::parse(pair);
     println!("{}", expr);
     println!("{}", expr.interp());
+
+    let other_expr = Generator::default().gen(0.999);
+    println!("{}", other_expr);
+    println!("{}", other_expr.interp());
 }
