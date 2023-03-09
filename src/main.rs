@@ -1,5 +1,5 @@
 use pest::{iterators::Pair, Parser};
-use rand::Rng;
+use rand::{rngs::SmallRng, Rng, SeedableRng};
 use std::env;
 use std::io::Read;
 
@@ -101,14 +101,25 @@ impl ExprPool {
     }
 }
 
-#[derive(Default)]
 struct Generator {
-    rng: rand::rngs::ThreadRng,
+    rng: SmallRng,
     pool: ExprPool,
 }
 
 impl Generator {
-    fn gen(&mut self, bin_prob: f64) -> ExprRef {
+    fn new(seed: u64) -> Self {
+        Self {
+            rng: SmallRng::seed_from_u64(seed),
+        }
+    }
+
+    fn default() -> Self {
+        Self {
+            rng: SmallRng::from_entropy(),
+        }
+    }
+
+    fn gen(&mut self, bin_prob: f64) -> Expr {
         if self.rng.gen::<f64>() > bin_prob {
             self.pool.add(Expr::Literal(self.rng.gen_range(0..100)))
         } else {
@@ -169,6 +180,15 @@ fn parse_stdin(pool: &mut ExprPool) -> std::io::Result<ExprRef> {
     Ok(pool.parse(pair))
 }
 
+fn generate() -> Expr {
+    let seed = env::args().nth(2);
+    let mut gen = match seed {
+        Some(s) => Generator::new(s.parse().expect("seed must be a number")),
+        None => Generator::default(),
+    };
+    gen.gen(0.9999999)
+}
+
 fn main() {
     let mut pool = ExprPool::default();
     let mode = env::args().nth(1).unwrap_or("interp".to_string());
@@ -180,11 +200,14 @@ fn main() {
         let expr = parse_stdin(&mut pool).unwrap();
         println!("{}", ExprDisplay { pool: &pool, expr });
     } else if mode == "gen" {
-        let expr = Generator::default().gen(0.9999);
+        let expr = generate();
         println!("{}", ExprDisplay { pool: &pool, expr });
     } else if mode == "flat_interp" {
         let expr = parse_stdin(&mut pool).unwrap();
         println!("{}", pool.flat_interp(expr));
+    } else if mode == "gen_interp" {
+        let expr = generate();
+        println!("{}", expr.interp());
     } else {
         eprintln!("unknown mode: {}", mode);
     }
