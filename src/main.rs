@@ -1,4 +1,5 @@
 use pest::{Parser, iterators::Pair};
+use std::io;
 
 #[derive(pest_derive::Parser)]
 #[grammar = "syntax.pest"]
@@ -36,7 +37,6 @@ impl Expr {
                 Expr::Binary(op, Box::new(Expr::parse(lhs)), Box::new(Expr::parse(rhs)))
             }
             Rule::number => {
-                dbg!(tree.as_str());
                 let num = tree.as_str().parse().unwrap();
                 Expr::Literal(num)
             }
@@ -61,9 +61,30 @@ impl Expr {
     }
 }
 
+impl std::fmt::Display for Expr {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Expr::Binary(op, lhs, rhs) => {
+                let op = match op {
+                    BinOp::Add => "+",
+                    BinOp::Sub => "-",
+                    BinOp::Mul => "*",
+                    BinOp::Div => "/",
+                };
+                write!(f, "({} {} {})", lhs, op, rhs)
+            }
+            Expr::Literal(num) => write!(f, "{}", num),
+        }
+    }
+}
+
 fn main() {
-    let mut pairs = Syntax::parse(Rule::expr, "1 + 2").expect("syntax error");
+    let mut buffer = String::new();
+    io::stdin().read_line(&mut buffer).unwrap();
+
+    let mut pairs = Syntax::parse(Rule::expr, &buffer).expect("syntax error");
     let pair = pairs.next().unwrap();
-    let expr = dbg!(Expr::parse(dbg!(pair)));
+    let expr = Expr::parse(pair);
+    println!("{}", expr);
     println!("{}", expr.interp());
 }
