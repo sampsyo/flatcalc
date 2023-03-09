@@ -78,6 +78,27 @@ impl ExprPool {
             Expr::Literal(num) => *num,
         }
     }
+
+    fn flat_interp(&self, root: ExprRef) -> i64 {
+        let mut state: Vec<i64> = vec![0; self.0.len()];
+        for (i, expr) in self.0.iter().enumerate() {
+            let res = match expr {
+                Expr::Binary(op, lhs, rhs) => {
+                    let lhs = state[lhs.0 as usize];
+                    let rhs = state[rhs.0 as usize];
+                    match op {
+                        BinOp::Add => lhs.wrapping_add(rhs),
+                        BinOp::Sub => lhs.wrapping_sub(rhs),
+                        BinOp::Mul => lhs.wrapping_mul(rhs),
+                        BinOp::Div => lhs.checked_div(rhs).unwrap_or(0),
+                    }
+                }
+                Expr::Literal(num) => *num
+            };
+            state[i] = res;
+        }
+        state[root.0 as usize]
+    }
 }
 
 #[derive(Default)]
@@ -161,6 +182,9 @@ fn main() {
     } else if mode == "gen" {
         let expr = Generator::default().gen(0.9999);
         println!("{}", ExprDisplay { pool: &pool, expr });
+    } else if mode == "flat_interp" {
+        let expr = parse_stdin(&mut pool).unwrap();
+        println!("{}", pool.flat_interp(expr));
     } else {
         eprintln!("unknown mode: {}", mode);
     }
