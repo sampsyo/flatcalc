@@ -123,7 +123,7 @@ fn main() {
         let expr = parse_stdin().unwrap();
         println!("{}", expr);
     } else if mode == "gen" {
-        let expr = Generator::default().gen(0.999);
+        let expr = Generator::default().gen(0.99999);
         println!("{}", expr);
     } else {
         eprintln!("unknown mode: {}", mode);
