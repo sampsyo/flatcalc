@@ -15,7 +15,7 @@ enum BinOp {
 #[derive(Debug)]
 enum Expr {
     Binary(BinOp, Box<Expr>, Box<Expr>),
-    Num(i64),
+    Literal(i64),
 }
 
 impl Expr {
@@ -38,9 +38,25 @@ impl Expr {
             Rule::number => {
                 dbg!(tree.as_str());
                 let num = tree.as_str().parse().unwrap();
-                Expr::Num(num)
+                Expr::Literal(num)
             }
             _ => unreachable!(),
+        }
+    }
+
+    fn interp(&self) -> i64 {
+        match self {
+            Expr::Binary(op, lhs, rhs) => {
+                let lhs = lhs.interp();
+                let rhs = rhs.interp();
+                match op {
+                    BinOp::Add => lhs + rhs,
+                    BinOp::Sub => lhs - rhs,
+                    BinOp::Mul => lhs * rhs,
+                    BinOp::Div => lhs / rhs,
+                }
+            }
+            Expr::Literal(num) => *num,
         }
     }
 }
@@ -48,6 +64,6 @@ impl Expr {
 fn main() {
     let mut pairs = Syntax::parse(Rule::expr, "1 + 2").expect("syntax error");
     let pair = pairs.next().unwrap();
-    let expr = Expr::parse(dbg!(pair));
-    dbg!(expr);
+    let expr = dbg!(Expr::parse(dbg!(pair)));
+    println!("{}", expr.interp());
 }
