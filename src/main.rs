@@ -34,8 +34,8 @@ impl Expr {
     }
 }
 
-struct MyParser<r: io::BufRead> {
-    reader: r,
+struct MyParser<R: io::BufRead> {
+    reader: R,
 }
 
 impl<R: io::BufRead> MyParser<R> {
