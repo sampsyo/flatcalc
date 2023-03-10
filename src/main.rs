@@ -28,7 +28,7 @@ struct ExprPool(Vec<Expr>);
 
 impl ExprPool {
     fn default() -> Self {
-        Self(Vec::with_capacity(10_000_000))
+        Self(Vec::with_capacity(100_000_000))
     }
 
     fn get(&self, expr: ExprRef) -> &Expr {
@@ -194,7 +194,7 @@ fn generate() -> (ExprPool, ExprRef) {
         Some(s) => Generator::new(s.parse().expect("seed must be a number")),
         None => Generator::default(),
     };
-    let expr = gen.gen(10000000);
+    let expr = gen.gen(100_000_000);
     (gen.pool, expr)
 }
 
