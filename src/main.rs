@@ -24,10 +24,13 @@ enum Expr {
     Literal(i64),
 }
 
-#[derive(Default)]
 struct ExprPool(Vec<Expr>);
 
 impl ExprPool {
+    fn default() -> Self {
+        Self(Vec::with_capacity(10_000_000))
+    }
+
     fn get(&self, expr: ExprRef) -> &Expr {
         &self.0[expr.0 as usize]
     }
