@@ -1,5 +1,5 @@
 use pest::{iterators::Pair, Parser};
-use rand::{rngs::SmallRng, SeedableRng, distributions::Distribution};
+use rand::{distributions::Distribution, rngs::SmallRng, SeedableRng};
 use std::env;
 use std::io::Read;
 
@@ -7,6 +7,7 @@ use std::io::Read;
 #[grammar = "syntax.pest"]
 struct Syntax;
 
+/// The arithmetic operators our language supports.
 #[derive(Debug)]
 enum BinOp {
     Add,
@@ -18,6 +19,7 @@ enum BinOp {
 #[derive(Debug, Clone, Copy)]
 struct ExprRef(u32);
 
+/// Our little programming language.
 #[derive(Debug)]
 enum Expr {
     Binary(BinOp, ExprRef, ExprRef),
@@ -41,6 +43,7 @@ impl ExprPool {
         ExprRef(idx.try_into().expect("too many exprs in the pool"))
     }
 
+    /// Translate a Pest parse tree into an expression.
     fn parse(&mut self, tree: Pair<Rule>) -> ExprRef {
         match tree.as_rule() {
             Rule::addExpr | Rule::mulExpr => {
@@ -66,6 +69,7 @@ impl ExprPool {
         }
     }
 
+    /// Evaluate the expression.
     fn interp(&self, expr: ExprRef) -> i64 {
         match self.get(expr) {
             Expr::Binary(op, lhs, rhs) => {
@@ -104,6 +108,7 @@ impl ExprPool {
     }
 }
 
+/// A random program generator.
 struct Generator {
     rng: SmallRng,
     pool: ExprPool,
@@ -124,6 +129,14 @@ impl Generator {
         }
     }
 
+    /// Generate a random expression.
+    ///
+    /// The expression is a literal with probablity 1/lit_prob_inv, and a binary expression
+    /// otherwise. When we generate a binary expression, the two subtrees have double the
+    /// probablity of generating literals.
+    ///
+    /// I haven't tried to work out the expected size/depth of the resulting tree, but it
+    /// empirically seems to be in the ballpark of lit_prob_env.
     fn gen(&mut self, lit_prob_inv: u32) -> ExprRef {
         let dist = rand::distributions::Bernoulli::from_ratio(1, lit_prob_inv).unwrap();
         if dist.sample(&mut self.rng) {
@@ -145,6 +158,7 @@ impl Generator {
     }
 }
 
+/// Pretty-printing for expressions.
 struct ExprDisplay<'a> {
     pool: &'a ExprPool,
     expr: ExprRef,
@@ -179,6 +193,7 @@ impl<'a> std::fmt::Display for ExprDisplay<'a> {
     }
 }
 
+/// Parse the program from stdin.
 fn parse_stdin(pool: &mut ExprPool) -> std::io::Result<ExprRef> {
     let mut buffer = String::new();
     std::io::stdin().read_to_string(&mut buffer)?;
@@ -188,6 +203,7 @@ fn parse_stdin(pool: &mut ExprPool) -> std::io::Result<ExprRef> {
     Ok(pool.parse(pair))
 }
 
+/// Generate a random program, with an optional seed taken from the second argv position.
 fn generate() -> (ExprPool, ExprRef) {
     let seed = env::args().nth(2);
     let mut gen = match seed {
@@ -198,31 +214,44 @@ fn generate() -> (ExprPool, ExprRef) {
     (gen.pool, expr)
 }
 
+/// An extremely simple CLI. The commands are:
+///
+/// * `interp`: Read a program from stdin and run it.
+/// * `pretty`: Read a program from stdin and print it back out on stdout.
+/// * `gen [SEED]`: Generate a random program and print it out on stdout.
+/// * `gen_interp [SEED]`: Generate a random program and run it.
 fn main() {
-    let mode = env::args().nth(1).unwrap_or("interp".to_string());
-
-    if mode == "interp" {
-        let mut pool = ExprPool::default();
-        let expr = parse_stdin(&mut pool).unwrap();
-        println!("{}", pool.interp(expr));
-    } else if mode == "pretty" {
-        let mut pool = ExprPool::default();
-        let expr = parse_stdin(&mut pool).unwrap();
-        println!("{}", ExprDisplay { pool: &pool, expr });
-    } else if mode == "gen" {
-        let (pool, expr) = generate();
-        println!("{}", ExprDisplay { pool: &pool, expr });
-    } else if mode == "flat_interp" {
-        let mut pool = ExprPool::default();
-        let expr = parse_stdin(&mut pool).unwrap();
-        println!("{}", pool.flat_interp(expr));
-    } else if mode == "gen_interp" {
-        let (pool, expr) = generate();
-        println!("{}", pool.interp(expr));
-    } else if mode == "gen_flat_interp" {
-        let (pool, expr) = generate();
-        println!("{}", pool.flat_interp(expr));
-    } else {
-        eprintln!("unknown mode: {}", mode);
+    let mode = env::args().nth(1).unwrap_or_else(|| "interp".to_string());
+    match mode.as_str() {
+        "interp" => {
+            let mut pool = ExprPool::default();
+            let expr = parse_stdin(&mut pool).unwrap();
+            println!("{}", pool.interp(expr));
+        }
+        "pretty" => {
+            let mut pool = ExprPool::default();
+            let expr = parse_stdin(&mut pool).unwrap();
+            println!("{}", ExprDisplay { pool: &pool, expr });
+        }
+        "gen" => {
+            let (pool, expr) = generate();
+            println!("{}", ExprDisplay { pool: &pool, expr });
+        }
+        "gen_interp" => {
+            let (pool, expr) = generate();
+            println!("{}", pool.interp(expr));
+        }
+        "flat_interp" => {
+            let mut pool = ExprPool::default();
+            let expr = parse_stdin(&mut pool).unwrap();
+            println!("{}", pool.flat_interp(expr));
+        }
+        "gen_flat_interp" => {
+            let (pool, expr) = generate();
+            println!("{}", pool.flat_interp(expr));
+        }
+        _ => {
+            eprintln!("unknown mode: {}", mode);
+        }
     }
 }
