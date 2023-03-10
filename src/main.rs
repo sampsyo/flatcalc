@@ -159,7 +159,7 @@ fn generate() -> Expr {
 /// * `gen [SEED]`: Generate a random program and print it out on stdout.
 /// * `gen_interp [SEED]`: Generate a random program and run it.
 fn main() {
-    let mode = env::args().nth(1).unwrap_or("interp".to_string());
+    let mode = env::args().nth(1).unwrap_or_else(|| "interp".to_string());
     match mode.as_str() {
         "interp" => {
             let expr = parse_stdin().unwrap();
