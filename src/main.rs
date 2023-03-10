@@ -2,7 +2,7 @@ use pest::{iterators::Pair, Parser};
 use rand::{rngs::SmallRng, SeedableRng, distributions::Distribution};
 use std::env;
 use std::io::Read;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 #[derive(pest_derive::Parser)]
 #[grammar = "syntax.pest"]
@@ -84,7 +84,7 @@ impl ExprPool {
     }
 
     fn flat_interp(self, root: ExprRef) -> i64 {
-        let mut state: HashMap<u32, i64> = HashMap::new();
+        let mut state: FxHashMap<u32, i64> = FxHashMap::default();
         for (i, expr) in self.0.into_iter().enumerate() {
             let res = match expr {
                 Expr::Binary(op, lhs, rhs) => {

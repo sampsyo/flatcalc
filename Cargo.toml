@@ -7,3 +7,4 @@ edition = "2021"
 pest = "2.0"
 pest_derive = "2.0"
 rand = { version = "0.8", features=["small_rng"] }
+rustc-hash = "1.1.0"
