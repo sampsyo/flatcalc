@@ -213,6 +213,9 @@ fn main() {
     } else if mode == "gen_interp" {
         let (pool, expr) = generate();
         println!("{}", pool.interp(expr));
+    } else if mode == "gen_flat_interp" {
+        let (pool, expr) = generate();
+        println!("{}", pool.flat_interp(expr));
     } else {
         eprintln!("unknown mode: {}", mode);
     }
