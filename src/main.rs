@@ -16,9 +16,6 @@ enum BinOp {
     Div,
 }
 
-#[derive(Debug, Clone, Copy)]
-struct ExprRef(u32);
-
 /// Our little programming language.
 #[derive(Debug)]
 enum Expr {
@@ -26,17 +23,31 @@ enum Expr {
     Literal(i64),
 }
 
+/// The thing we use instead of pointers to refer to expressions.
+///
+/// In this "flattened" implementation, references are just indices into a vector where the `Expr`s
+/// are stored. We use the "newtype" pattern instead of a plain `u32` here to clarify where the
+/// reference is supposed to be used. 
+#[derive(Debug, Clone, Copy)]
+struct ExprRef(u32);
+
+/// An "arena" for storing expressions that can refer to each other.
+///
+/// This is just a plain, dense array where a family of `Expr`s live.
 struct ExprPool(Vec<Expr>);
 
 impl ExprPool {
+    /// Create an empty pool.
     fn default() -> Self {
         Self(Vec::with_capacity(100_000_000))
     }
 
+    /// Dereference an AST node reference, obtaining the underlying `Expr`.
     fn get(&self, expr: ExprRef) -> &Expr {
         &self.0[expr.0 as usize]
     }
 
+    /// Add an expression to the pool and get a reference to it.
     fn add(&mut self, expr: Expr) -> ExprRef {
         let idx = self.0.len();
         self.0.push(expr);
@@ -86,6 +97,11 @@ impl ExprPool {
         }
     }
 
+    /// An alternative interpreter that exploits the flat structure.
+    ///
+    /// Instead of recursively traversing from the root, we take advantage of the fact that our
+    /// expressions only refer "backward" in the pool. Therefore, it suffices to evaluate each
+    /// expression in the pool *in order*. No recursion required.
     fn flat_interp(self, root: ExprRef) -> i64 {
         let mut state: Vec<i64> = vec![0; self.0.len()];
         for (i, expr) in self.0.into_iter().enumerate() {
