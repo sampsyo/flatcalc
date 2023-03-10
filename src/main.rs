@@ -133,7 +133,7 @@ fn generate() -> Expr {
         Some(s) => Generator::new(s.parse().expect("seed must be a number")),
         None => Generator::default(),
     };
-    gen.gen(10000000)
+    gen.gen(100_000_000)
 }
 
 fn main() {
