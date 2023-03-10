@@ -1,5 +1,5 @@
 use pest::{iterators::Pair, Parser};
-use rand::{rngs::SmallRng, Rng, SeedableRng};
+use rand::{rngs::SmallRng, Rng, SeedableRng, distributions::Distribution};
 use std::env;
 use std::io::Read;
 
@@ -80,12 +80,13 @@ impl Generator {
         }
     }
 
-    fn gen(&mut self, bin_prob: f64) -> Expr {
-        if self.rng.gen::<f64>() > bin_prob {
+    fn gen(&mut self, lit_prob_inv: u32) -> Expr {
+        let dist = rand::distributions::Bernoulli::from_ratio(1, lit_prob_inv).unwrap();
+        if dist.sample(&mut self.rng) {
             Expr::Literal(self.rng.gen_range(0..100))
         } else {
-            let lhs = Box::new(self.gen(bin_prob.powi(2)));
-            let rhs = Box::new(self.gen(bin_prob.powi(2)));
+            let lhs = Box::new(self.gen(lit_prob_inv / 2));
+            let rhs = Box::new(self.gen(lit_prob_inv / 2));
             let op = match self.rng.gen_range(0..4) {
                 0 => BinOp::Add,
                 1 => BinOp::Sub,
@@ -130,7 +131,7 @@ fn generate() -> Expr {
         Some(s) => Generator::new(s.parse().expect("seed must be a number")),
         None => Generator::default(),
     };
-    gen.gen(0.9999999)
+    gen.gen(10000000)
 }
 
 fn main() {
