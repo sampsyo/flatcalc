@@ -1,5 +1,5 @@
 use pest::{iterators::Pair, Parser};
-use rand::{rngs::SmallRng, SeedableRng, distributions::Distribution};
+use rand::{distributions::Distribution, rngs::SmallRng, SeedableRng};
 use std::env;
 use std::io::Read;
 
@@ -7,6 +7,7 @@ use std::io::Read;
 #[grammar = "syntax.pest"]
 struct Syntax;
 
+/// The arithmetic operators our language supports.
 #[derive(Debug)]
 enum BinOp {
     Add,
@@ -15,6 +16,7 @@ enum BinOp {
     Div,
 }
 
+/// Our little programming language.
 #[derive(Debug)]
 enum Expr {
     Binary(BinOp, Box<Expr>, Box<Expr>),
@@ -22,6 +24,7 @@ enum Expr {
 }
 
 impl Expr {
+    /// Translate a Pest parse tree into an expression.
     fn parse(tree: Pair<Rule>) -> Self {
         match tree.as_rule() {
             Rule::addExpr | Rule::mulExpr => {
@@ -46,6 +49,7 @@ impl Expr {
         }
     }
 
+    /// Evaluate the expression.
     fn interp(&self) -> i64 {
         match self {
             Expr::Binary(op, lhs, rhs) => {
@@ -63,6 +67,7 @@ impl Expr {
     }
 }
 
+/// A random program generator.
 struct Generator {
     rng: SmallRng,
 }
@@ -80,6 +85,14 @@ impl Generator {
         }
     }
 
+    /// Generate a random expression.
+    ///
+    /// The expression is a literal with probablity 1/lit_prob_inv, and a binary expression
+    /// otherwise. When we generate a binary expression, the two subtrees have double the
+    /// probablity of generating literals.
+    ///
+    /// I haven't tried to work out the expected size/depth of the resulting tree, but it
+    /// empirically seems to be in the ballpark of lit_prob_env.
     fn gen(&mut self, lit_prob_inv: u32) -> Expr {
         let dist = rand::distributions::Bernoulli::from_ratio(1, lit_prob_inv).unwrap();
         if dist.sample(&mut self.rng) {
@@ -101,6 +114,7 @@ impl Generator {
     }
 }
 
+/// Pretty-printing for expressions.
 impl std::fmt::Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
@@ -118,6 +132,7 @@ impl std::fmt::Display for Expr {
     }
 }
 
+/// Parse the program from stdin.
 fn parse_stdin() -> std::io::Result<Expr> {
     let mut buffer = String::new();
     std::io::stdin().read_to_string(&mut buffer)?;
@@ -127,6 +142,7 @@ fn parse_stdin() -> std::io::Result<Expr> {
     Ok(Expr::parse(pair))
 }
 
+/// Generate a random program, with an optional seed taken from the second argv position.
 fn generate() -> Expr {
     let seed = env::args().nth(2);
     let mut gen = match seed {
@@ -136,21 +152,33 @@ fn generate() -> Expr {
     gen.gen(100_000_000)
 }
 
+/// An extremely simple CLI. The commands are:
+///
+/// * `interp`: Read a program from stdin and run it.
+/// * `pretty`: Read a program from stdin and print it back out on stdout.
+/// * `gen [SEED]`: Generate a random program and print it out on stdout.
+/// * `gen_interp [SEED]`: Generate a random program and run it.
 fn main() {
     let mode = env::args().nth(1).unwrap_or("interp".to_string());
-
-    if mode == "interp" {
-        let expr = parse_stdin().unwrap();
-        println!("{}", expr.interp());
-    } else if mode == "pretty" {
-        let expr = parse_stdin().unwrap();
-        println!("{}", expr);
-    } else if mode == "gen" {
-        println!("{}", generate());
-    } else if mode == "gen_interp" {
-        let expr = generate();
-        println!("{}", expr.interp());
-    } else {
-        eprintln!("unknown mode: {}", mode);
+    match mode.as_str() {
+        "interp" => {
+            let expr = parse_stdin().unwrap();
+            println!("{}", expr.interp());
+        }
+        "pretty" => {
+            let expr = parse_stdin().unwrap();
+            println!("{}", expr);
+        }
+        "gen" => {
+            let expr = generate();
+            println!("{}", expr);
+        }
+        "gen_interp" => {
+            let expr = generate();
+            println!("{}", expr.interp());
+        }
+        _ => {
+            eprintln!("unknown mode: {}", mode);
+        }
     }
 }
