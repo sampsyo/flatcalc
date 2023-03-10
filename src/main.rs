@@ -2,6 +2,7 @@ use pest::{iterators::Pair, Parser};
 use rand::{rngs::SmallRng, SeedableRng, distributions::Distribution};
 use std::env;
 use std::io::Read;
+use std::collections::HashMap;
 
 #[derive(pest_derive::Parser)]
 #[grammar = "syntax.pest"]
@@ -83,12 +84,12 @@ impl ExprPool {
     }
 
     fn flat_interp(self, root: ExprRef) -> i64 {
-        let mut state: Vec<i64> = vec![0; self.0.len()];
+        let mut state: HashMap<u32, i64> = HashMap::new();
         for (i, expr) in self.0.into_iter().enumerate() {
             let res = match expr {
                 Expr::Binary(op, lhs, rhs) => {
-                    let lhs = state[lhs.0 as usize];
-                    let rhs = state[rhs.0 as usize];
+                    let lhs = state.remove(&lhs.0).unwrap();
+                    let rhs = state.remove(&rhs.0).unwrap();
                     match op {
                         BinOp::Add => lhs.wrapping_add(rhs),
                         BinOp::Sub => lhs.wrapping_sub(rhs),
@@ -98,9 +99,9 @@ impl ExprPool {
                 }
                 Expr::Literal(num) => num
             };
-            state[i] = res;
+            state.insert(i as u32, res);
         }
-        state[root.0 as usize]
+        state.remove(&root.0).unwrap()
     }
 }
 
