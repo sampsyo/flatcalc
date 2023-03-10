@@ -20,6 +20,21 @@ That way, you can see exactly what has to change to "flatten" the whole implemen
 [region]: https://en.wikipedia.org/wiki/Region-based_memory_management
 [compare]: https://github.com/sampsyo/flatcalc/compare/main...flat#diff-42cb6807ad74b3e201c5a7ca98b911c5fa08380e942be6e4ac5807f8377f87fc
 
+Run It
+------
+
+Use `flatcalc` or `flatcalc interp` to parse an expression from stdin and evaluate it.
+There is also `flatcalc pretty`, which just pretty-prints the expression from stdin back out on stdout.
+
+`flatcalc gen` randomly generates a really big expression.
+There is an optional seed, so do `flatcalc gen 42` to get a deterministic expression.
+You can also immediately run the randomly generated expression (without printing it) by typing `flatcalc gen_interp 42`.
+This is nice for benchmarking.
+
+There is a `make bench` target that uses [Hyperfine][] for a quick performance measurement.
+
+[hyperfine]: https://github.com/sharkdp/hyperfine
+
 Author
 ------
 
