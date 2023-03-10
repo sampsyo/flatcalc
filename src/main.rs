@@ -82,9 +82,9 @@ impl ExprPool {
         }
     }
 
-    fn flat_interp(&self, root: ExprRef) -> i64 {
+    fn flat_interp(self, root: ExprRef) -> i64 {
         let mut state: Vec<i64> = vec![0; self.0.len()];
-        for (i, expr) in self.0.iter().enumerate() {
+        for (i, expr) in self.0.into_iter().enumerate() {
             let res = match expr {
                 Expr::Binary(op, lhs, rhs) => {
                     let lhs = state[lhs.0 as usize];
@@ -96,7 +96,7 @@ impl ExprPool {
                         BinOp::Div => lhs.checked_div(rhs).unwrap_or(0),
                     }
                 }
-                Expr::Literal(num) => *num
+                Expr::Literal(num) => num
             };
             state[i] = res;
         }
