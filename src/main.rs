@@ -1,5 +1,5 @@
 use pest::{iterators::Pair, Parser};
-use rand::{rngs::SmallRng, Rng, SeedableRng};
+use rand::{rngs::SmallRng, SeedableRng, distributions::Distribution};
 use std::env;
 use std::io::Read;
 
@@ -121,13 +121,16 @@ impl Generator {
         }
     }
 
-    fn gen(&mut self, bin_prob: f64) -> ExprRef {
-        if self.rng.gen::<f64>() > bin_prob {
-            self.pool.add(Expr::Literal(self.rng.gen_range(0..100)))
+    fn gen(&mut self, lit_prob_inv: u32) -> ExprRef {
+        let dist = rand::distributions::Bernoulli::from_ratio(1, lit_prob_inv).unwrap();
+        if dist.sample(&mut self.rng) {
+            let unif = rand::distributions::Uniform::new(0i64, 100i64);
+            self.pool.add(Expr::Literal(unif.sample(&mut self.rng)))
         } else {
-            let lhs = self.gen(bin_prob.powi(2));
-            let rhs = self.gen(bin_prob.powi(2));
-            let op = match self.rng.gen_range(0..4) {
+            let lhs = self.gen(lit_prob_inv / 2);
+            let rhs = self.gen(lit_prob_inv / 2);
+            let unif = rand::distributions::Uniform::new(0u8, 4u8);
+            let op = match unif.sample(&mut self.rng) {
                 0 => BinOp::Add,
                 1 => BinOp::Sub,
                 2 => BinOp::Mul,
@@ -188,7 +191,7 @@ fn generate() -> (ExprPool, ExprRef) {
         Some(s) => Generator::new(s.parse().expect("seed must be a number")),
         None => Generator::default(),
     };
-    let expr = gen.gen(0.9999999);
+    let expr = gen.gen(10000000);
     (gen.pool, expr)
 }
 
