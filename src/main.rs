@@ -100,11 +100,16 @@ impl ExprPool {
                         BinOp::Div => lhs.checked_div(rhs).unwrap_or(0),
                     }
                 }
-                Expr::Literal(num) => num
+                Expr::Literal(num) => num,
             };
             state[i] = res;
         }
         state[root.0 as usize]
+    }
+
+    /// Wrap an expression in a type that implements `Display` for easy formatting.
+    fn disp(&self, expr: ExprRef) -> ExprDisplay {
+        ExprDisplay { pool: self, expr }
     }
 }
 
@@ -159,6 +164,9 @@ impl Generator {
 }
 
 /// Pretty-printing for expressions.
+///
+/// Because we can't print `ExprRef`s alone, this wrapper associates one with a pool so we can
+/// format it. Use `pool.disp(expr)` to create this wrapper conveniently.
 struct ExprDisplay<'a> {
     pool: &'a ExprPool,
     expr: ExprRef,
@@ -177,15 +185,9 @@ impl<'a> std::fmt::Display for ExprDisplay<'a> {
                 write!(
                     f,
                     "({} {} {})",
-                    ExprDisplay {
-                        pool: self.pool,
-                        expr: *lhs
-                    },
+                    self.pool.disp(*lhs),
                     op,
-                    ExprDisplay {
-                        pool: self.pool,
-                        expr: *rhs
-                    }
+                    self.pool.disp(*rhs)
                 )
             }
             Expr::Literal(num) => write!(f, "{}", num),
@@ -231,11 +233,11 @@ fn main() {
         "pretty" => {
             let mut pool = ExprPool::default();
             let expr = parse_stdin(&mut pool).unwrap();
-            println!("{}", ExprDisplay { pool: &pool, expr });
+            println!("{}", pool.disp(expr));
         }
         "gen" => {
             let (pool, expr) = generate();
-            println!("{}", ExprDisplay { pool: &pool, expr });
+            println!("{}", pool.disp(expr));
         }
         "gen_interp" => {
             let (pool, expr) = generate();
