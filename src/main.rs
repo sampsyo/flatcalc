@@ -110,16 +110,18 @@ impl Generator {
     fn new(seed: u64) -> Self {
         Self {
             rng: SmallRng::seed_from_u64(seed),
+            pool: ExprPool::default(),
         }
     }
 
     fn default() -> Self {
         Self {
             rng: SmallRng::from_entropy(),
+            pool: ExprPool::default(),
         }
     }
 
-    fn gen(&mut self, bin_prob: f64) -> Expr {
+    fn gen(&mut self, bin_prob: f64) -> ExprRef {
         if self.rng.gen::<f64>() > bin_prob {
             self.pool.add(Expr::Literal(self.rng.gen_range(0..100)))
         } else {
@@ -180,34 +182,37 @@ fn parse_stdin(pool: &mut ExprPool) -> std::io::Result<ExprRef> {
     Ok(pool.parse(pair))
 }
 
-fn generate() -> Expr {
+fn generate() -> (ExprPool, ExprRef) {
     let seed = env::args().nth(2);
     let mut gen = match seed {
         Some(s) => Generator::new(s.parse().expect("seed must be a number")),
         None => Generator::default(),
     };
-    gen.gen(0.9999999)
+    let expr = gen.gen(0.9999999);
+    (gen.pool, expr)
 }
 
 fn main() {
-    let mut pool = ExprPool::default();
     let mode = env::args().nth(1).unwrap_or("interp".to_string());
 
     if mode == "interp" {
+        let mut pool = ExprPool::default();
         let expr = parse_stdin(&mut pool).unwrap();
         println!("{}", pool.interp(expr));
     } else if mode == "pretty" {
+        let mut pool = ExprPool::default();
         let expr = parse_stdin(&mut pool).unwrap();
         println!("{}", ExprDisplay { pool: &pool, expr });
     } else if mode == "gen" {
-        let expr = generate();
+        let (pool, expr) = generate();
         println!("{}", ExprDisplay { pool: &pool, expr });
     } else if mode == "flat_interp" {
+        let mut pool = ExprPool::default();
         let expr = parse_stdin(&mut pool).unwrap();
         println!("{}", pool.flat_interp(expr));
     } else if mode == "gen_interp" {
-        let expr = generate();
-        println!("{}", expr.interp());
+        let (pool, expr) = generate();
+        println!("{}", pool.interp(expr));
     } else {
         eprintln!("unknown mode: {}", mode);
     }
