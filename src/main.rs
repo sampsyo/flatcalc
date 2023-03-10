@@ -27,7 +27,7 @@ enum Expr {
 ///
 /// In this "flattened" implementation, references are just indices into a vector where the `Expr`s
 /// are stored. We use the "newtype" pattern instead of a plain `u32` here to clarify where the
-/// reference is supposed to be used. 
+/// reference is supposed to be used.
 #[derive(Debug, Clone, Copy)]
 struct ExprRef(u32);
 
