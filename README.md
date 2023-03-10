@@ -31,6 +31,8 @@ There is an optional seed, so do `flatcalc gen 42` to get a deterministic expres
 You can also immediately run the randomly generated expression (without printing it) by typing `flatcalc gen_interp 42`.
 This is nice for benchmarking.
 
+This `flat` branch also adds `flat_interp` and `gen_flat_interp`, which demonstrate a different, even flatter interpretation strategy.
+
 There is a `make bench` target that uses [Hyperfine][] for a quick performance measurement.
 
 [hyperfine]: https://github.com/sharkdp/hyperfine
