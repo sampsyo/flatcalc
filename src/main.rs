@@ -186,18 +186,26 @@ fn main() {
         "interp" => {
             let expr = parse_stdin().unwrap();
             println!("{}", expr.interp());
+            #[cfg(feature = "nofree")]
+            std::mem::forget(expr);
         }
         "pretty" => {
             let expr = parse_stdin().unwrap();
             println!("{}", expr);
+            #[cfg(feature = "nofree")]
+            std::mem::forget(expr);
         }
         "gen" => {
             let expr = generate();
             println!("{}", expr);
+            #[cfg(feature = "nofree")]
+            std::mem::forget(expr);
         }
         "gen_interp" => {
             let expr = generate();
             println!("{}", expr.interp());
+            #[cfg(feature = "nofree")]
+            std::mem::forget(expr);
         }
         _ => {
             eprintln!("unknown mode: {}", mode);
