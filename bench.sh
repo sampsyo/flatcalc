@@ -10,6 +10,4 @@ hyperfine --export-csv bench.csv -w1 \
   --prepare 'git checkout flat ; cargo build --release --features nofree' \
     -n 'flat nofree' "./target/release/flatcalc gen_interp $seed" \
   --prepare 'git checkout flat ; cargo build --release' \
-    -n 'extra-flat' "./target/release/flatcalc gen_flat_interp $seed" \
-  --prepare 'git checkout flat ; cargo build --release --features nofree' \
-    -n 'extra-flat nofree' "./target/release/flatcalc gen_flat_interp $seed"
+    -n 'extra-flat' "./target/release/flatcalc gen_flat_interp $seed"
