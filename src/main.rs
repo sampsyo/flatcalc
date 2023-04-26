@@ -293,14 +293,10 @@ fn main() {
             let mut pool = ExprPool::default();
             let expr = parse_stdin(&mut pool).unwrap();
             println!("{}", pool.flat_interp(expr));
-            #[cfg(feature = "nofree")]
-            std::mem::forget(pool);
         }
         "gen_flat_interp" => {
             let (pool, expr) = generate();
             println!("{}", pool.flat_interp(expr));
-            #[cfg(feature = "nofree")]
-            std::mem::forget(pool);
         }
         _ => {
             eprintln!("unknown mode: {}", mode);
