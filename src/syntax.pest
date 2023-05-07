@@ -14,7 +14,7 @@ mulOp = _{ mul | div }
 
 // Expressions.
 addExprW = _{ addExpr | mulExprW }
-    addExpr = { term ~ addOp ~ addExprW }
+    addExpr = { mulExprW ~ addOp ~ addExprW }
 mulExprW = _{ mulExpr | term }
     mulExpr = { term ~ mulOp ~ mulExprW }
 term = _{ number | "(" ~ addExprW ~ ")" }
