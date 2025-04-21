@@ -23,6 +23,101 @@ enum Expr {
     Literal(i64),
 }
 
+struct HandParser<'a> {
+    buf: &'a str,
+}
+
+impl<'a> HandParser<'a> {
+    fn new(buf: &'a str) -> Self {
+        HandParser { buf }
+    }
+
+    fn consume(&mut self, char_pred: fn(char) -> bool) -> Option<char> {
+        let first = self.buf.chars().next()?;
+        if char_pred(first) {
+            self.buf = &self.buf[first.len_utf8()..];
+            Some(first)
+        } else {
+            None
+        }
+    }
+
+    fn skip_whitespace(&mut self) {
+        while self.consume(|c| c == ' ').is_some() {}
+    }
+
+    fn parse_digits(&mut self) -> Option<i64> {
+        let mut num = 0;
+        while let Some(digit) = self.consume(|c| c.is_ascii_digit()) {
+            num = num * 10 + (digit as i64 - b'0' as i64);
+        }
+        Some(num)
+    }
+
+    fn parse_int(&mut self) -> Option<i64> {
+        let negative = self.consume(|c| c == '-').is_some();
+        let digits = self.parse_digits()?;
+        Some(if negative { -digits } else { digits })
+    }
+
+    fn parse_add(&mut self) -> Option<Expr> {
+        let lhs = self.parse_mulexpr()?;
+        self.consume(|c| c == '+')?;
+        let rhs = self.parse_addexpr()?;
+        Some(Expr::Binary(BinOp::Add, Box::new(lhs), Box::new(rhs)))
+    }
+
+    fn parse_mul(&mut self) -> Option<Expr> {
+        let lhs = self.parse_term()?;
+        self.consume(|c| c == '*')?;
+        let rhs = self.parse_mulexpr()?;
+        Some(Expr::Binary(BinOp::Mul, Box::new(lhs), Box::new(rhs)))
+    }
+
+    fn parse_addexpr(&mut self) -> Option<Expr> {
+        match self.parse_add() {
+            Some(expr) => Some(expr),
+            None => match self.parse_mul() {
+                Some(expr) => Some(expr),
+                None => self.parse_term(),
+            },
+        }
+    }
+
+    fn parse_mulexpr(&mut self) -> Option<Expr> {
+        match self.parse_mul() {
+            Some(expr) => Some(expr),
+            None => self.parse_term(),
+        }
+    }
+
+    fn parse_term(&mut self) -> Option<Expr> {
+        if self.consume(|c| c == '(').is_some() {
+            let expr = self.parse_addexpr()?;
+            self.consume(|c| c == ')')?;
+            Some(expr)
+        } else {
+            self.parse_int().map(|n| Expr::Literal(n))
+        }
+    }
+
+    fn parse(buf: &str) -> Option<Expr> {
+        let mut parser = HandParser::new(buf);
+        parser.parse_addexpr()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn blug() {
+        let expr = HandParser::parse("42").unwrap();
+        dbg!(expr);
+    }
+}
+
 impl Expr {
     /// Translate a Pest parse tree into an expression.
     fn parse(tree: Pair<Rule>) -> Self {
