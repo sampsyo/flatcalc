@@ -1,4 +1,4 @@
-use rand::{distributions::Distribution, rngs::SmallRng, SeedableRng};
+use fastrand::Rng;
 use std::env;
 use std::io::Read;
 
@@ -128,20 +128,18 @@ impl<'a> Parser<'a> {
 
 /// A random program generator.
 struct Generator {
-    rng: SmallRng,
+    rng: Rng,
 }
 
 impl Generator {
     fn new(seed: u64) -> Self {
         Self {
-            rng: SmallRng::seed_from_u64(seed),
+            rng: Rng::with_seed(seed),
         }
     }
 
     fn default() -> Self {
-        Self {
-            rng: SmallRng::from_entropy(),
-        }
+        Self { rng: Rng::new() }
     }
 
     /// Generate a random expression.
@@ -175,15 +173,12 @@ impl Generator {
     ///
     /// Anecdotally, this also seems to be the right ballpark in practice.
     fn gen(&mut self, lit_prob_inv: u32) -> Expr {
-        let dist = rand::distributions::Bernoulli::from_ratio(1, lit_prob_inv).unwrap();
-        if dist.sample(&mut self.rng) {
-            let unif = rand::distributions::Uniform::new(0i64, 100i64);
-            Expr::Literal(unif.sample(&mut self.rng))
+        if self.rng.u32(0..lit_prob_inv) == 0 {
+            Expr::Literal(self.rng.i64(0..100))
         } else {
             let lhs = Box::new(self.gen(lit_prob_inv / 2));
             let rhs = Box::new(self.gen(lit_prob_inv / 2));
-            let unif = rand::distributions::Uniform::new(0u8, 4u8);
-            let op = match unif.sample(&mut self.rng) {
+            let op = match self.rng.u8(0..4) {
                 0 => BinOp::Add,
                 1 => BinOp::Sub,
                 2 => BinOp::Mul,
