@@ -33,7 +33,7 @@ This is nice for benchmarking.
 
 This `flat` branch also adds `flat_interp` and `gen_flat_interp`, which demonstrate a different, even flatter interpretation strategy.
 
-There is a `make bench` target that uses [Hyperfine][] for a quick performance measurement.
+There is a `bench.sh` script that uses [Hyperfine][] for a quick performance measurement.
 
 [hyperfine]: https://github.com/sharkdp/hyperfine
 
