@@ -129,7 +129,11 @@ impl<'a> HandParser<'a> {
         parser.skip_whitespace();
         let res = parser.parse_addexpr()?;
         parser.skip_whitespace();
-        Some(res)
+        if parser.buf.is_empty() {
+            Some(res)
+        } else {
+            None
+        }
     }
 }
 
