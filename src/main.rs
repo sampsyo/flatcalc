@@ -18,6 +18,9 @@ enum Expr {
     Literal(i64),
 }
 
+/// A parser for our language.
+///
+/// Requires fully parenthesized syntax, like (1*2)+(3-4).
 struct Parser<'a> {
     buf: &'a str,
 }
