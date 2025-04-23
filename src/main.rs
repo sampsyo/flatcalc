@@ -238,12 +238,12 @@ impl Generator {
     ///     i = i
     ///
     /// Anecdotally, this also seems to be the right ballpark in practice.
-    fn gen(&mut self, lit_prob_inv: u32) -> ExprRef {
+    fn generate(&mut self, lit_prob_inv: u32) -> ExprRef {
         if self.rng.u32(0..lit_prob_inv) == 0 {
             self.pool.add(Expr::Literal(self.rng.i64(0..100)))
         } else {
-            let lhs = self.gen(lit_prob_inv / 2);
-            let rhs = self.gen(lit_prob_inv / 2);
+            let lhs = self.generate(lit_prob_inv / 2);
+            let rhs = self.generate(lit_prob_inv / 2);
             let op = match self.rng.u8(0..4) {
                 0 => BinOp::Add,
                 1 => BinOp::Sub,
@@ -299,12 +299,12 @@ fn parse_stdin(pool: &mut ExprPool) -> std::io::Result<ExprRef> {
 /// Generate a random program, with an optional seed taken from the second argv position.
 fn generate() -> (ExprPool, ExprRef) {
     let seed = env::args().nth(2);
-    let mut gen = match seed {
+    let mut genr = match seed {
         Some(s) => Generator::new(s.parse().expect("seed must be a number")),
         None => Generator::default(),
     };
-    let expr = gen.gen(100_000_000);
-    (gen.pool, expr)
+    let expr = genr.generate(100_000_000);
+    (genr.pool, expr)
 }
 
 /// An extremely simple CLI. The commands are:
