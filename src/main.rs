@@ -18,6 +18,25 @@ enum Expr {
     Literal(i64),
 }
 
+impl Expr {
+    /// Evaluate the expression.
+    fn interp(&self) -> i64 {
+        match self {
+            Expr::Binary(op, lhs, rhs) => {
+                let lhs = lhs.interp();
+                let rhs = rhs.interp();
+                match op {
+                    BinOp::Add => lhs.wrapping_add(rhs),
+                    BinOp::Sub => lhs.wrapping_sub(rhs),
+                    BinOp::Mul => lhs.wrapping_mul(rhs),
+                    BinOp::Div => lhs.checked_div(rhs).unwrap_or(0),
+                }
+            }
+            Expr::Literal(num) => *num,
+        }
+    }
+}
+
 /// A parser for our language.
 ///
 /// Requires fully parenthesized syntax, like (1*2)+(3-4).
@@ -103,25 +122,6 @@ impl<'a> Parser<'a> {
             Some(res)
         } else {
             None
-        }
-    }
-}
-
-impl Expr {
-    /// Evaluate the expression.
-    fn interp(&self) -> i64 {
-        match self {
-            Expr::Binary(op, lhs, rhs) => {
-                let lhs = lhs.interp();
-                let rhs = rhs.interp();
-                match op {
-                    BinOp::Add => lhs.wrapping_add(rhs),
-                    BinOp::Sub => lhs.wrapping_sub(rhs),
-                    BinOp::Mul => lhs.wrapping_mul(rhs),
-                    BinOp::Div => lhs.checked_div(rhs).unwrap_or(0),
-                }
-            }
-            Expr::Literal(num) => *num,
         }
     }
 }
