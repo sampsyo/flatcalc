@@ -74,20 +74,14 @@ impl<'a> HandParser<'a> {
         Some(Expr::Binary(BinOp::Mul, Box::new(lhs), Box::new(rhs)))
     }
 
-    fn parse_addexpr(&mut self) -> Option<Expr> {
-        match self.parse_add() {
+    fn maybe(&mut self, action: fn(&mut Self) -> Option<Expr>) -> Option<Expr> {
+        let orig = self.buf;
+        match action(self) {
             Some(expr) => Some(expr),
-            None => match self.parse_mul() {
-                Some(expr) => Some(expr),
-                None => self.parse_term(),
-            },
-        }
-    }
-
-    fn parse_mulexpr(&mut self) -> Option<Expr> {
-        match self.parse_mul() {
-            Some(expr) => Some(expr),
-            None => self.parse_term(),
+            None => {
+                self.buf = orig;
+                None
+            }
         }
     }
 
@@ -98,6 +92,20 @@ impl<'a> HandParser<'a> {
             Some(expr)
         } else {
             self.parse_int().map(|n| Expr::Literal(n))
+        }
+    }
+
+    fn parse_addexpr(&mut self) -> Option<Expr> {
+        match self.maybe(Self::parse_add) {
+            Some(expr) => Some(expr),
+            None => self.parse_mulexpr(),
+        }
+    }
+
+    fn parse_mulexpr(&mut self) -> Option<Expr> {
+        match self.maybe(Self::parse_mul) {
+            Some(expr) => Some(expr),
+            None => self.parse_term(),
         }
     }
 
@@ -113,7 +121,7 @@ mod tests {
 
     #[test]
     fn blug() {
-        let expr = HandParser::parse("42").unwrap();
+        let expr = HandParser::parse("1*(0+2)*3").unwrap();
         dbg!(expr);
     }
 }
