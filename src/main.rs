@@ -59,47 +59,30 @@ impl<'a> Parser<'a> {
         Some(if negative { -digits } else { digits })
     }
 
-    fn parse_addsub(&mut self) -> Option<Expr> {
-        let lhs = self.parse_mulexpr()?;
-        self.skip_whitespace();
-        let op = match self.consume(|c| c == '+' || c == '-')? {
-            '+' => BinOp::Add,
-            '-' => BinOp::Sub,
-            _ => unreachable!(),
-        };
-        self.skip_whitespace();
-        let rhs = self.parse_addexpr()?;
-        Some(Expr::Binary(op, Box::new(lhs), Box::new(rhs)))
-    }
-
-    fn parse_muldiv(&mut self) -> Option<Expr> {
+    fn parse_expr(&mut self) -> Option<Expr> {
         let lhs = self.parse_term()?;
         self.skip_whitespace();
-        let op = match self.consume(|c| c == '*' || c == '/')? {
-            '*' => BinOp::Mul,
-            '/' => BinOp::Div,
-            _ => unreachable!(),
+        let op = match self.consume(|c| c == '+' || c == '-' || c == '*' || c == '/') {
+            Some(c) => match c {
+                '+' => BinOp::Add,
+                '-' => BinOp::Sub,
+                '*' => BinOp::Mul,
+                '/' => BinOp::Div,
+                _ => unreachable!(),
+            },
+            None => {
+                return Some(lhs);
+            }
         };
         self.skip_whitespace();
-        let rhs = self.parse_mulexpr()?;
+        let rhs = self.parse_term()?;
         Some(Expr::Binary(op, Box::new(lhs), Box::new(rhs)))
-    }
-
-    fn maybe(&mut self, action: fn(&mut Self) -> Option<Expr>) -> Option<Expr> {
-        let orig = self.buf;
-        match action(self) {
-            Some(expr) => Some(expr),
-            None => {
-                self.buf = orig;
-                None
-            }
-        }
     }
 
     fn parse_term(&mut self) -> Option<Expr> {
         if self.consume(|c| c == '(').is_some() {
             self.skip_whitespace();
-            let expr = self.parse_addexpr()?;
+            let expr = self.parse_expr()?;
             self.skip_whitespace();
             self.consume(|c| c == ')')?;
             Some(expr)
@@ -108,24 +91,10 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_addexpr(&mut self) -> Option<Expr> {
-        match self.maybe(Self::parse_addsub) {
-            Some(expr) => Some(expr),
-            None => self.parse_mulexpr(),
-        }
-    }
-
-    fn parse_mulexpr(&mut self) -> Option<Expr> {
-        match self.maybe(Self::parse_muldiv) {
-            Some(expr) => Some(expr),
-            None => self.parse_term(),
-        }
-    }
-
     fn parse(buf: &str) -> Option<Expr> {
         let mut parser = Parser::new(buf);
         parser.skip_whitespace();
-        let res = parser.parse_addexpr()?;
+        let res = parser.parse_expr()?;
         parser.skip_whitespace();
         if parser.buf.is_empty() {
             Some(res)
