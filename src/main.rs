@@ -38,7 +38,10 @@ impl<'a> Parser<'a> {
     }
 
     fn skip_whitespace(&mut self) {
-        while self.consume(|c| c == ' ').is_some() {}
+        while self
+            .consume(|c| c == ' ' || c == '\n' || c == '\t')
+            .is_some()
+        {}
     }
 
     fn parse_digits(&mut self) -> Option<i64> {
