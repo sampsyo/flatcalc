@@ -60,22 +60,30 @@ impl<'a> HandParser<'a> {
         Some(if negative { -digits } else { digits })
     }
 
-    fn parse_add(&mut self) -> Option<Expr> {
+    fn parse_addsub(&mut self) -> Option<Expr> {
         let lhs = self.parse_mulexpr()?;
         self.skip_whitespace();
-        self.consume(|c| c == '+')?;
+        let op = match self.consume(|c| c == '+' || c == '-')? {
+            '+' => BinOp::Add,
+            '-' => BinOp::Sub,
+            _ => unreachable!(),
+        };
         self.skip_whitespace();
         let rhs = self.parse_addexpr()?;
-        Some(Expr::Binary(BinOp::Add, Box::new(lhs), Box::new(rhs)))
+        Some(Expr::Binary(op, Box::new(lhs), Box::new(rhs)))
     }
 
-    fn parse_mul(&mut self) -> Option<Expr> {
+    fn parse_muldiv(&mut self) -> Option<Expr> {
         let lhs = self.parse_term()?;
         self.skip_whitespace();
-        self.consume(|c| c == '*')?;
+        let op = match self.consume(|c| c == '*' || c == '/')? {
+            '*' => BinOp::Mul,
+            '/' => BinOp::Div,
+            _ => unreachable!(),
+        };
         self.skip_whitespace();
         let rhs = self.parse_mulexpr()?;
-        Some(Expr::Binary(BinOp::Mul, Box::new(lhs), Box::new(rhs)))
+        Some(Expr::Binary(op, Box::new(lhs), Box::new(rhs)))
     }
 
     fn maybe(&mut self, action: fn(&mut Self) -> Option<Expr>) -> Option<Expr> {
@@ -102,14 +110,14 @@ impl<'a> HandParser<'a> {
     }
 
     fn parse_addexpr(&mut self) -> Option<Expr> {
-        match self.maybe(Self::parse_add) {
+        match self.maybe(Self::parse_addsub) {
             Some(expr) => Some(expr),
             None => self.parse_mulexpr(),
         }
     }
 
     fn parse_mulexpr(&mut self) -> Option<Expr> {
-        match self.maybe(Self::parse_mul) {
+        match self.maybe(Self::parse_muldiv) {
             Some(expr) => Some(expr),
             None => self.parse_term(),
         }
@@ -130,7 +138,7 @@ mod tests {
 
     #[test]
     fn blug() {
-        let expr = HandParser::parse("1 * (0+2) * 3").unwrap();
+        let expr = HandParser::parse("1 * (0-2) * 3/2").unwrap();
         dbg!(expr);
     }
 }
