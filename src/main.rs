@@ -1,11 +1,6 @@
-use pest::{iterators::Pair, Parser};
 use rand::{distributions::Distribution, rngs::SmallRng, SeedableRng};
 use std::env;
 use std::io::Read;
-
-#[derive(pest_derive::Parser)]
-#[grammar = "syntax.pest"]
-struct Syntax;
 
 /// The arithmetic operators our language supports.
 #[derive(Debug)]
@@ -23,13 +18,13 @@ enum Expr {
     Literal(i64),
 }
 
-struct HandParser<'a> {
+struct Parser<'a> {
     buf: &'a str,
 }
 
-impl<'a> HandParser<'a> {
+impl<'a> Parser<'a> {
     fn new(buf: &'a str) -> Self {
-        HandParser { buf }
+        Self { buf }
     }
 
     fn consume(&mut self, char_pred: fn(char) -> bool) -> Option<char> {
@@ -125,7 +120,7 @@ impl<'a> HandParser<'a> {
     }
 
     fn parse(buf: &str) -> Option<Expr> {
-        let mut parser = HandParser::new(buf);
+        let mut parser = Parser::new(buf);
         parser.skip_whitespace();
         let res = parser.parse_addexpr()?;
         parser.skip_whitespace();
@@ -137,45 +132,7 @@ impl<'a> HandParser<'a> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn blug() {
-        let expr = HandParser::parse("1 * (0-2) * 3/2").unwrap();
-        dbg!(expr);
-        let err = HandParser::parse("1 * () * 3");
-        dbg!(err);
-    }
-}
-
 impl Expr {
-    /// Translate a Pest parse tree into an expression.
-    fn parse(tree: Pair<Rule>) -> Self {
-        match tree.as_rule() {
-            Rule::addExpr | Rule::mulExpr => {
-                let mut pairs = tree.into_inner();
-                let lhs = pairs.next().unwrap();
-                let op = pairs.next().unwrap();
-                let rhs = pairs.next().unwrap();
-                let op = match op.as_rule() {
-                    Rule::add => BinOp::Add,
-                    Rule::sub => BinOp::Sub,
-                    Rule::mul => BinOp::Mul,
-                    Rule::div => BinOp::Div,
-                    _ => unreachable!(),
-                };
-                Expr::Binary(op, Box::new(Expr::parse(lhs)), Box::new(Expr::parse(rhs)))
-            }
-            Rule::number => {
-                let num = tree.as_str().parse().unwrap();
-                Expr::Literal(num)
-            }
-            _ => unreachable!(),
-        }
-    }
-
     /// Evaluate the expression.
     fn interp(&self) -> i64 {
         match self {
@@ -285,10 +242,8 @@ impl std::fmt::Display for Expr {
 fn parse_stdin() -> std::io::Result<Expr> {
     let mut buffer = String::new();
     std::io::stdin().read_to_string(&mut buffer)?;
-
-    let mut pairs = Syntax::parse(Rule::expr, &buffer).expect("syntax error");
-    let pair = pairs.next().unwrap();
-    Ok(Expr::parse(pair))
+    let expr = Parser::parse(&buffer).expect("syntax error");
+    Ok(expr)
 }
 
 /// Generate a random program, with an optional seed taken from the second argv position.

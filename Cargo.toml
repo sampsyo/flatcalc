@@ -4,9 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-pest = "2.0"
-pest_derive = "2.0"
-rand = { version = "0.8", features=["small_rng"] }
+rand = { version = "0.8", features = ["small_rng"] }
 
 [features]
 nofree = []
