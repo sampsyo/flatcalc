@@ -1,11 +1,6 @@
-use pest::{iterators::Pair, Parser};
 use rand::{distributions::Distribution, rngs::SmallRng, SeedableRng};
 use std::env;
 use std::io::Read;
-
-#[derive(pest_derive::Parser)]
-#[grammar = "syntax.pest"]
-struct Syntax;
 
 /// The arithmetic operators our language supports.
 #[derive(Debug)]
@@ -54,33 +49,6 @@ impl ExprPool {
         ExprRef(idx.try_into().expect("too many exprs in the pool"))
     }
 
-    /// Translate a Pest parse tree into an expression.
-    fn parse(&mut self, tree: Pair<Rule>) -> ExprRef {
-        match tree.as_rule() {
-            Rule::addExpr | Rule::mulExpr => {
-                let mut pairs = tree.into_inner();
-                let lhs = pairs.next().unwrap();
-                let op = pairs.next().unwrap();
-                let rhs = pairs.next().unwrap();
-                let op = match op.as_rule() {
-                    Rule::add => BinOp::Add,
-                    Rule::sub => BinOp::Sub,
-                    Rule::mul => BinOp::Mul,
-                    Rule::div => BinOp::Div,
-                    _ => unreachable!(),
-                };
-                let expr = Expr::Binary(op, self.parse(lhs), self.parse(rhs));
-                self.add(expr)
-            }
-            Rule::number => {
-                let num = tree.as_str().parse().unwrap();
-                self.add(Expr::Literal(num))
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    /// Evaluate the expression.
     fn interp(&self, expr: ExprRef) -> i64 {
         match self.get(expr) {
             Expr::Binary(op, lhs, rhs) => {
@@ -126,6 +94,96 @@ impl ExprPool {
     /// Wrap an expression in a type that implements `Display` for easy formatting.
     fn disp(&self, expr: ExprRef) -> ExprDisplay {
         ExprDisplay { pool: self, expr }
+    }
+}
+
+/// A parser for our language.
+///
+/// Requires fully parenthesized syntax, like (1*2)+(3-4).
+struct Parser<'a, 'b> {
+    pool: &'a mut ExprPool,
+    buf: &'b str,
+}
+
+impl<'a, 'b> Parser<'a, 'b> {
+    fn new(pool: &'a mut ExprPool, buf: &'b str) -> Self {
+        Self { pool, buf }
+    }
+
+    fn consume(&mut self, char_pred: fn(char) -> bool) -> Option<char> {
+        let first = self.buf.chars().next()?;
+        if char_pred(first) {
+            self.buf = &self.buf[first.len_utf8()..];
+            Some(first)
+        } else {
+            None
+        }
+    }
+
+    fn skip_whitespace(&mut self) {
+        while self
+            .consume(|c| c == ' ' || c == '\n' || c == '\t')
+            .is_some()
+        {}
+    }
+
+    fn parse_digits(&mut self) -> Option<i64> {
+        let first = self.consume(|c| c.is_ascii_digit())?; // Require at least one digit.
+        let mut num = first as i64 - b'0' as i64;
+        while let Some(digit) = self.consume(|c| c.is_ascii_digit()) {
+            num = num * 10 + (digit as i64 - b'0' as i64);
+        }
+        Some(num)
+    }
+
+    fn parse_int(&mut self) -> Option<i64> {
+        let negative = self.consume(|c| c == '-').is_some();
+        let digits = self.parse_digits()?;
+        Some(if negative { -digits } else { digits })
+    }
+
+    fn parse_expr(&mut self) -> Option<ExprRef> {
+        let lhs = self.parse_term()?;
+        self.skip_whitespace();
+        let op = match self.consume(|c| c == '+' || c == '-' || c == '*' || c == '/') {
+            Some(c) => match c {
+                '+' => BinOp::Add,
+                '-' => BinOp::Sub,
+                '*' => BinOp::Mul,
+                '/' => BinOp::Div,
+                _ => unreachable!(),
+            },
+            None => {
+                return Some(lhs);
+            }
+        };
+        self.skip_whitespace();
+        let rhs = self.parse_term()?;
+        Some(self.pool.add(Expr::Binary(op, lhs, rhs)))
+    }
+
+    fn parse_term(&mut self) -> Option<ExprRef> {
+        if self.consume(|c| c == '(').is_some() {
+            self.skip_whitespace();
+            let expr = self.parse_expr()?;
+            self.skip_whitespace();
+            self.consume(|c| c == ')')?;
+            Some(expr)
+        } else {
+            self.parse_int().map(|i| self.pool.add(Expr::Literal(i)))
+        }
+    }
+
+    fn parse(pool: &mut ExprPool, buf: &str) -> Option<ExprRef> {
+        let mut parser = Parser::new(pool, buf);
+        parser.skip_whitespace();
+        let res = parser.parse_expr()?;
+        parser.skip_whitespace();
+        if parser.buf.is_empty() {
+            Some(res)
+        } else {
+            None
+        }
     }
 }
 
@@ -237,10 +295,8 @@ impl<'a> std::fmt::Display for ExprDisplay<'a> {
 fn parse_stdin(pool: &mut ExprPool) -> std::io::Result<ExprRef> {
     let mut buffer = String::new();
     std::io::stdin().read_to_string(&mut buffer)?;
-
-    let mut pairs = Syntax::parse(Rule::expr, &buffer).expect("syntax error");
-    let pair = pairs.next().unwrap();
-    Ok(pool.parse(pair))
+    let expr = Parser::parse(pool, &buffer).expect("syntax error");
+    Ok(expr)
 }
 
 /// Generate a random program, with an optional seed taken from the second argv position.
