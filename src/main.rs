@@ -47,7 +47,8 @@ impl<'a> HandParser<'a> {
     }
 
     fn parse_digits(&mut self) -> Option<i64> {
-        let mut num = 0;
+        let first = self.consume(|c| c.is_ascii_digit())?; // Require at least one digit.
+        let mut num = first as i64 - b'0' as i64;
         while let Some(digit) = self.consume(|c| c.is_ascii_digit()) {
             num = num * 10 + (digit as i64 - b'0' as i64);
         }
@@ -140,6 +141,8 @@ mod tests {
     fn blug() {
         let expr = HandParser::parse("1 * (0-2) * 3/2").unwrap();
         dbg!(expr);
+        let err = HandParser::parse("1 * () * 3");
+        dbg!(err);
     }
 }
 
