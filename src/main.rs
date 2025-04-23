@@ -62,14 +62,18 @@ impl<'a> HandParser<'a> {
 
     fn parse_add(&mut self) -> Option<Expr> {
         let lhs = self.parse_mulexpr()?;
+        self.skip_whitespace();
         self.consume(|c| c == '+')?;
+        self.skip_whitespace();
         let rhs = self.parse_addexpr()?;
         Some(Expr::Binary(BinOp::Add, Box::new(lhs), Box::new(rhs)))
     }
 
     fn parse_mul(&mut self) -> Option<Expr> {
         let lhs = self.parse_term()?;
+        self.skip_whitespace();
         self.consume(|c| c == '*')?;
+        self.skip_whitespace();
         let rhs = self.parse_mulexpr()?;
         Some(Expr::Binary(BinOp::Mul, Box::new(lhs), Box::new(rhs)))
     }
@@ -87,7 +91,9 @@ impl<'a> HandParser<'a> {
 
     fn parse_term(&mut self) -> Option<Expr> {
         if self.consume(|c| c == '(').is_some() {
+            self.skip_whitespace();
             let expr = self.parse_addexpr()?;
+            self.skip_whitespace();
             self.consume(|c| c == ')')?;
             Some(expr)
         } else {
@@ -111,7 +117,10 @@ impl<'a> HandParser<'a> {
 
     fn parse(buf: &str) -> Option<Expr> {
         let mut parser = HandParser::new(buf);
-        parser.parse_addexpr()
+        parser.skip_whitespace();
+        let res = parser.parse_addexpr()?;
+        parser.skip_whitespace();
+        Some(res)
     }
 }
 
@@ -121,7 +130,7 @@ mod tests {
 
     #[test]
     fn blug() {
-        let expr = HandParser::parse("1*(0+2)*3").unwrap();
+        let expr = HandParser::parse("1 * (0+2) * 3").unwrap();
         dbg!(expr);
     }
 }
