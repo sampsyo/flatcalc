@@ -104,7 +104,7 @@ impl<'a> Parser<'a> {
             self.consume(|c| c == ')')?;
             Some(expr)
         } else {
-            self.parse_int().map(|n| Expr::Literal(n))
+            self.parse_int().map(Expr::Literal)
         }
     }
 
